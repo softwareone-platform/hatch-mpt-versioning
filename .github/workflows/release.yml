@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,6 +31,11 @@ jobs:
 
       - name: Publish to PyPI
         env:
-          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
-        run: uv publish
+          PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: |
+          if [ -n "${PYPI_TOKEN}" ]; then
+            uv publish --token "${PYPI_TOKEN}"
+          else
+            uv publish --trusted-publishing=always
+          fi
 
