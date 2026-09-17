@@ -29,6 +29,24 @@ class TestVersionFormatting(unittest.TestCase):
         desc = self._parse_describe("1.0.0-0-g4cdc9aa-dirty")
         self.assertEqual(self._format_version(desc, self.tag_regex), "1.0.0+g4cdc9aa.dirty")
 
+    def test_no_local_version_one_commit_ahead(self):
+        desc = self._parse_describe("1.0.0-1-g4cdc9aa")
+        self.assertEqual(
+            self._format_version(desc, self.tag_regex, local_version=False), "1.0.1"
+        )
+
+    def test_no_local_version_dirty(self):
+        desc = self._parse_describe("1.0.0-1-g4cdc9aa-dirty")
+        self.assertEqual(
+            self._format_version(desc, self.tag_regex, local_version=False), "1.0.1"
+        )
+
+    def test_no_local_version_dirty_on_tag(self):
+        desc = self._parse_describe("1.0.0-0-g4cdc9aa-dirty")
+        self.assertEqual(
+            self._format_version(desc, self.tag_regex, local_version=False), "1.0.0"
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

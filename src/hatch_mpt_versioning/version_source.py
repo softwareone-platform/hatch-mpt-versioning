@@ -83,7 +83,7 @@ def _split_semverish(version: str) -> Tuple[str, str, str]:
     return parts[0], parts[1], parts[2]
 
 
-def _format_version(desc: _Describe, tag_regex: str) -> str:
+def _format_version(desc: _Describe, tag_regex: str, local_version: bool = True) -> str:
     base = _extract_version(desc.tag, tag_regex)
     major, minor, patch = _split_semverish(base)
 
@@ -92,10 +92,11 @@ def _format_version(desc: _Describe, tag_regex: str) -> str:
         return base
 
     local_parts: List[str] = []
-    if desc.sha:
-        local_parts.append(f"g{desc.sha[:7]}")
-    if desc.dirty:
-        local_parts.append("dirty")
+    if local_version:
+        if desc.sha:
+            local_parts.append(f"g{desc.sha[:7]}")
+        if desc.dirty:
+            local_parts.append("dirty")
     local = f"+{'.'.join(local_parts)}" if local_parts else ""
 
     if desc.distance == 0:
@@ -121,6 +122,10 @@ class MptGitDescribeVersionSource(VersionSourceInterface):
     Options (under `[tool.hatch.version]`):
     - `tag_regex`: regex with group `version` to extract base version from tag.
     - `git_describe_args`: list of args for `git describe` (defaults to a safe `--long` form).
+    - `local_version`: whether to append a `+g<sha>[.dirty]` local segment when not
+      on an exact tag (default `True`). Set to `False` to get a plain PEP 440
+      version (e.g. `1.0.1` instead of `1.0.1+g4cdc9aa`) that PyPI will accept,
+      at the cost of losing the commit sha from the version string.
     """
 
     PLUGIN_NAME = "mpt-git-describe"
@@ -128,12 +133,13 @@ class MptGitDescribeVersionSource(VersionSourceInterface):
     def get_version_data(self) -> Dict[str, Any]:
         tag_regex = self.config.get("tag_regex") or _DEFAULT_TAG_REGEX
         argv = self.config.get("git_describe_args") or _DEFAULT_DESCRIBE
+        local_version = self.config.get("local_version", True)
 
         if not isinstance(argv, list) or not all(isinstance(x, str) for x in argv):
             raise TypeError("git_describe_args must be a list of strings")
 
         output = _run_git_describe(self.root, argv)
         desc = _parse_describe(output)
-        version = _format_version(desc, tag_regex)
+        version = _format_version(desc, tag_regex, local_version)
         return {"version": version, "describe": output}
 
